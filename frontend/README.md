@@ -1,70 +1,236 @@
-# Getting Started with Create React App
+# Plateforme de Prétraitement d'Images
+## ISI Monastir - ING2 INFO
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Plateforme web complète pour le prétraitement d'images avec React.js et Flask.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## 🎯 Fonctionnalités
 
-### `npm start`
+### ✅ Implémentées (Interface)
+- ✨ Upload multiple d'images avec validation
+- 🖼️ Galerie d'images avec navigation
+- 🔄 Gestion de l'historique (Annuler/Rétablir)
+- 🔍 Zoom et mode comparaison côte à côte
+- 💾 Téléchargement des images traitées
+- 📱 Interface responsive et moderne
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### 🔧 À Implémenter (Traitement)
+Tous les boutons sont présents mais les fonctions de traitement sont vides :
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+#### Conversion
+- Niveaux de gris
+- RGB → HSV
 
-### `npm test`
+#### Seuillage
+- Seuillage binaire (avec curseur)
+- Seuillage adaptatif
+- Seuillage Otsu
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+#### Filtres
+- Flou gaussien (avec curseur d'intensité)
+- Filtre médian
+- Accentuation
 
-### `npm run build`
+#### Détection de Contours
+- Canny
+- Sobel
+- Laplacien
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+#### Transformations Géométriques
+- Redimensionnement (avec curseur)
+- Rotation (avec curseur d'angle)
+- Miroir horizontal/vertical
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+#### Amélioration
+- Égalisation d'histogramme
+- Normalisation
+- CLAHE
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+#### Segmentation
+- Extraction canal Rouge
+- Extraction canal Vert
+- Extraction canal Bleu
 
-### `npm run eject`
+#### Analyse
+- Affichage d'histogramme
+- Détection de visages
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+---
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## 🚀 Installation
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Prérequis
+- Node.js (v16 ou supérieur)
+- Python 3.8+
+- pip
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### 1. Backend Flask
 
-## Learn More
+```bash
+# Créer un dossier pour le projet
+mkdir image-preprocessing-platform
+cd image-preprocessing-platform
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+# Créer un dossier backend
+mkdir backend
+cd backend
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+# Créer un environnement virtuel
+python -m venv venv
 
-### Code Splitting
+# Activer l'environnement virtuel
+# Sur Windows:
+venv\Scripts\activate
+# Sur Mac/Linux:
+source venv/bin/activate
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+# Installer les dépendances
+pip install -r requirements.txt
 
-### Analyzing the Bundle Size
+# Lancer le serveur Flask
+python app.py
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+Le backend sera accessible sur `http://localhost:5000`
 
-### Making a Progressive Web App
+### 2. Frontend React
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+```bash
+# Retourner au dossier principal
+cd ..
 
-### Advanced Configuration
+# Créer l'application React
+npx create-react-app frontend
+cd frontend
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+# Installer les dépendances supplémentaires
+npm install lucide-react
 
-### Deployment
+# Remplacer le contenu de src/App.js par le code React fourni
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+# Lancer l'application React
+npm start
+```
 
-### `npm run build` fails to minify
+Le frontend sera accessible sur `http://localhost:3000`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+---
+
+## 📁 Structure du Projet
+
+```
+image-preprocessing-platform/
+│
+├── backend/
+│   ├── app.py                 # API Flask (fonctions vides à implémenter)
+│   ├── requirements.txt       # Dépendances Python
+│   └── venv/                  # Environnement virtuel
+│
+├── frontend/
+│   ├── src/
+│   │   └── App.js            # Interface React complète
+│   ├── package.json
+│   └── node_modules/
+│
+└── README.md
+```
+
+---
+
+## 🔨 Prochaines Étapes
+
+### Pour compléter le projet :
+
+1. **Implémenter les fonctions de traitement dans `app.py`**
+   - Chaque fonction est marquée avec `# TODO:`
+   - Utiliser OpenCV (cv2) pour les traitements
+   - Exemples de fonctions à compléter :
+     ```python
+     def convert_to_grayscale(image):
+         return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+     ```
+
+2. **Implémenter les fonctions helper**
+   - `decode_image()` : Convertir base64 → numpy array
+   - `encode_image()` : Convertir numpy array → base64
+
+3. **Tester chaque fonctionnalité**
+   - Upload d'images
+   - Application des traitements
+   - Téléchargement des résultats
+
+4. **Ajouter des fonctionnalités bonus**
+   - Histogrammes interactifs (avec matplotlib)
+   - Détection de visages (Haar Cascades)
+   - Prévisualisation en temps réel
+
+---
+
+## 🎨 Technologies Utilisées
+
+### Frontend
+- **React.js** - Framework UI
+- **Tailwind CSS** - Styling
+- **Lucide React** - Icônes
+
+### Backend
+- **Flask** - API REST
+- **OpenCV** - Traitement d'images
+- **NumPy** - Manipulation de données
+- **Pillow** - Gestion d'images
+- **Matplotlib** - Visualisation
+
+---
+
+## 🐛 Gestion des Erreurs
+
+L'application gère automatiquement :
+- ✅ Fichiers non-images
+- ✅ Fichiers trop volumineux (> 10MB)
+- ✅ Erreurs de traitement
+- ✅ Erreurs de connexion au backend
+
+---
+
+## 📝 Notes pour le Développement
+
+### Ordre recommandé d'implémentation :
+
+1. **Fonctions helper** (decode/encode)
+2. **Conversion** (grayscale - la plus simple)
+3. **Filtres** (blur, sharpen)
+4. **Seuillage** (binary, adaptive)
+5. **Transformations** (resize, rotate, flip)
+6. **Détection** (edges)
+7. **Amélioration** (histogram, normalize)
+8. **Analyse** (histogram display, face detection)
+
+### Conseils :
+- Commencer par les fonctions simples pour tester la communication frontend/backend
+- Utiliser Postman ou curl pour tester l'API indépendamment
+- Vérifier les formats d'image (RGB vs BGR dans OpenCV)
+- Gérer les cas où l'image est déjà en niveaux de gris
+
+---
+
+## 📚 Ressources Utiles
+
+- [Documentation OpenCV](https://docs.opencv.org/)
+- [Flask Documentation](https://flask.palletsprojects.com/)
+- [React Documentation](https://react.dev/)
+- [Tailwind CSS](https://tailwindcss.com/)
+
+---
+
+## 👥 Équipe
+
+**ISI Monastir - ING2 INFO**  
+**Proposé par:** Dr. Nada Haj Messaoud  
+**Année Universitaire:** 2025-2026
+
+---
+
+## 📄 Licence
+
+Projet académique - ISI Monastir
