@@ -151,7 +151,6 @@ const ImagePreprocessingPlatform = () => {
           <h1 className="text-4xl font-bold text-white mb-2">
             Plateforme de Prétraitement d'Images
           </h1>
-          <p className="text-purple-200">ISI Monastir - ING2 INFO</p>
         </div>
 
         {/* Error Display */}
