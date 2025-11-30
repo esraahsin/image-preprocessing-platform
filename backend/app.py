@@ -4,6 +4,11 @@ import base64
 from io import BytesIO
 from PIL import Image
 import numpy as np
+import cv2
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
 
 app = Flask(__name__)
 CORS(app)  # Permettre les requêtes depuis React
@@ -13,14 +18,20 @@ app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max
 
 # Helper functions
 def decode_image(image_data):
-    """Décode une image base64 en array numpy"""
-    # TODO: Implémenter la conversion base64 -> numpy array
-    pass
+    """Décode une image base64 → numpy array (BGR pour OpenCV)"""
+    header, encoded = image_data.split(',', 1)
+    img_bytes = base64.b64decode(encoded)
+    img = Image.open(BytesIO(img_bytes)).convert("RGB")
+    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
 def encode_image(image_array):
-    """Encode un array numpy en base64"""
-    # TODO: Implémenter la conversion numpy array -> base64
-    pass
+    """Encode numpy array (BGR) → base64"""
+    img_rgb = cv2.cvtColor(image_array, cv2.COLOR_BGR2RGB)
+    pil_img = Image.fromarray(img_rgb)
+    buffer = BytesIO()
+    pil_img.save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    return "data:image/png;base64," + encoded
 
 # Routes API
 @app.route('/api/process', methods=['POST'])
@@ -41,17 +52,21 @@ def process_image():
         
         # Appliquer l'opération demandée
         processed_image = apply_operation(image, operation, params)
-        
-        # Encoder le résultat
-        result = encode_image(processed_image)
-        
+
+        # ⚠ Si le résultat est déjà base64, ne pas réencoder
+        if isinstance(processed_image, str):
+            result = processed_image
+        else:
+            result = encode_image(processed_image)
+
         return jsonify({
             'success': True,
             'processed_image': result,
             'operation': operation
         })
-        
+    
     except Exception as e:
+        print("ERROR PROCESS:", e)   # ← affichage dans terminal
         return jsonify({'error': str(e)}), 500
 
 def apply_operation(image, operation, params):
@@ -194,22 +209,25 @@ def apply_sharpen(image):
     pass
 
 def detect_edges_canny(image):
-    """Détecte les contours avec Canny"""
-    # TODO: Implémenter la détection Canny
-    # cv2.Canny()
-    pass
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 100, 200)
+    return cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+
 
 def detect_edges_sobel(image):
-    """Détecte les contours avec Sobel"""
-    # TODO: Implémenter la détection Sobel
-    # cv2.Sobel()
-    pass
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=5)
+    sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=5)
+    sobel = cv2.magnitude(sobelx, sobely)
+    sobel = np.uint8(sobel)
+    return cv2.cvtColor(sobel, cv2.COLOR_GRAY2BGR)
 
 def detect_edges_laplacian(image):
-    """Détecte les contours avec Laplacien"""
-    # TODO: Implémenter la détection Laplacien
-    # cv2.Laplacian()
-    pass
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    lap = cv2.Laplacian(gray, cv2.CV_64F)
+    lap = cv2.convertScaleAbs(lap)
+    return cv2.cvtColor(lap, cv2.COLOR_GRAY2BGR)
+
 
 def resize_image(image, scale):
     """Redimensionne l'image"""
@@ -260,16 +278,37 @@ def extract_channel(image, channel_index):
     pass
 
 def generate_histogram(image):
-    """Génère un histogramme de l'image"""
-    # TODO: Implémenter la génération d'histogramme
-    # cv2.calcHist() puis créer une visualisation
-    pass
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Créer la figure en mémoire (sans interface GUI)
+    fig = plt.figure(figsize=(4, 3))
+    plt.hist(gray.ravel(), bins=256, range=(0, 256), color='purple')
+    plt.title("Histogramme")
+    plt.xlabel("Niveaux de gris")
+    plt.ylabel("Fréquence")
+    plt.tight_layout()
+
+    # Sauvegarde dans un buffer mémoire
+    buffer = BytesIO()
+    fig.savefig(buffer, format="png")
+    buffer.seek(0)
+    plt.close(fig)  # IMPORTANT : fermer la figure proprement
+
+    encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    return "data:image/png;base64," + encoded
+
 
 def detect_faces(image):
-    """Détecte les visages dans l'image"""
-    # TODO: Implémenter la détection de visages
-    # cv2.CascadeClassifier avec haarcascade_frontalface_default.xml
-    pass
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    cascade = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
+    
+    faces = cascade.detectMultiScale(gray, 1.3, 5)
+
+    for (x, y, w, h) in faces:
+        cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 3)
+
+    return image
+
 
 # Route de test
 @app.route('/api/health', methods=['GET'])
