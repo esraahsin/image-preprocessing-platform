@@ -71,16 +71,19 @@ def process_image():
         
         # Appliquer l'opération demandée
         processed_image = apply_operation(image, operation, params)
-        
-        # Encoder le résultat
-        result = encode_image(processed_image)
-        
+
+        # ⚠ Si le résultat est déjà base64, ne pas réencoder
+        if isinstance(processed_image, str):
+            result = processed_image
+        else:
+            result = encode_image(processed_image)
+
         return jsonify({
             'success': True,
             'processed_image': result,
             'operation': operation
         })
-        
+    
     except Exception as e:
         print(f"Erreur process_image: {e}")
         return jsonify({'error': str(e)}), 500
