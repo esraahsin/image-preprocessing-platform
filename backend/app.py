@@ -7,7 +7,8 @@ import numpy as np
 import cv2
 
 app = Flask(__name__)
-CORS(app)  # Permettre les requêtes depuis React
+
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Configuration
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max
@@ -16,41 +17,50 @@ app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max
 def decode_image(image_data):
     """Décode une image base64 en array numpy"""
     try:
-        # Extraire les données base64 (enlever le préfixe data:image/...)
+        # Supprimer le préfixe data:image/...;base64, si présent
         if ',' in image_data:
             image_data = image_data.split(',')[1]
         
-        # Décoder base64
+        # Décoder le base64
         image_bytes = base64.b64decode(image_data)
         
-        # Convertir en array numpy
-        nparr = np.frombuffer(image_bytes, np.uint8)
+        # Convertir en PIL Image
+        pil_image = Image.open(BytesIO(image_bytes))
         
-        # Décoder l'image avec OpenCV
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        # Convertir en array numpy (RGB)
+        image_array = np.array(pil_image)
         
-        return image
+        # Si l'image a un canal alpha, le supprimer
+        if image_array.shape[-1] == 4:
+            image_array = cv2.cvtColor(image_array, cv2.COLOR_RGBA2RGB)
+        
+        return image_array
     except Exception as e:
-        print(f"Erreur decode_image: {e}")
-        raise ValueError(f"Impossible de décoder l'image: {e}")
+        raise ValueError(f"Erreur lors du décodage de l'image: {str(e)}")
 
 def encode_image(image_array):
     """Encode un array numpy en base64"""
     try:
-        # Encoder l'image en format PNG
-        success, buffer = cv2.imencode('.png', image_array)
+        # Convertir numpy array en PIL Image
+        if len(image_array.shape) == 2:
+            # Image en niveaux de gris
+            pil_image = Image.fromarray(image_array.astype('uint8'))
+        else:
+            # Image couleur
+            pil_image = Image.fromarray(image_array.astype('uint8'))
         
-        if not success:
-            raise ValueError("Échec de l'encodage de l'image")
+        # Sauvegarder dans un buffer
+        buffer = BytesIO()
+        pil_image.save(buffer, format='PNG')
+        buffer.seek(0)
         
-        # Convertir en base64
-        image_base64 = base64.b64encode(buffer).decode('utf-8')
+        # Encoder en base64
+        image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
         
-        # Ajouter le préfixe pour l'affichage dans le navigateur
+        # Ajouter le préfixe data URI
         return f"data:image/png;base64,{image_base64}"
     except Exception as e:
-        print(f"Erreur encode_image: {e}")
-        raise ValueError(f"Impossible d'encoder l'image: {e}")
+        raise ValueError(f"Erreur lors de l'encodage de l'image: {str(e)}")
 
 # Routes API
 @app.route('/api/process', methods=['POST'])
@@ -182,82 +192,75 @@ def apply_operation(image, operation, params):
 # ===== CONVERSION =====
 def convert_to_grayscale(image):
     """Convertit l'image en niveaux de gris"""
-    try:
-        if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            # Convertir en 3 canaux pour la compatibilité
-            return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    # Si l'image est déjà en niveaux de gris
+    if len(image.shape) == 2:
         return image
-    except Exception as e:
-        print(f"Erreur convert_to_grayscale: {e}")
-        return image
+    
+    # Convertir RGB en niveaux de gris
+    gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    return gray_image
 
 def convert_rgb_to_hsv(image):
     """Convertit RGB en HSV"""
-    try:
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        return hsv
-    except Exception as e:
-        print(f"Erreur convert_rgb_to_hsv: {e}")
-        return image
+    # Vérifier que l'image est en couleur
+    if len(image.shape) != 3 or image.shape[2] != 3:
+        raise ValueError("L'image doit être en RGB pour la conversion HSV")
+    
+    # Convertir RGB en HSV
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    return hsv_image
 
-# ===== SEUILLAGE =====
-def threshold_binary(image, threshold):
+
+# ==================== SEUILLAGE ====================
+
+def threshold_binary(image, threshold_value):
     """Applique un seuillage binaire"""
-    try:
-        # Convertir en niveaux de gris si nécessaire
-        if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        else:
-            gray = image
-        
-        # Appliquer le seuillage
-        _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
-        
-        # Convertir en 3 canaux pour la compatibilité
-        return cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
-    except Exception as e:
-        print(f"Erreur threshold_binary: {e}")
-        return image
+    # Convertir en niveaux de gris si nécessaire
+    if len(image.shape) == 3:
+        gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    else:
+        gray_image = image.copy()
+    
+    # Appliquer le seuillage binaire
+    _, thresholded = cv2.threshold(gray_image, threshold_value, 255, cv2.THRESH_BINARY)
+    return thresholded
 
 def threshold_adaptive(image):
     """Applique un seuillage adaptatif"""
-    try:
-        # Convertir en niveaux de gris
-        if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        else:
-            gray = image
-        
-        # Appliquer le seuillage adaptatif
-        adaptive = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-            cv2.THRESH_BINARY, 11, 2
-        )
-        
-        # Convertir en 3 canaux
-        return cv2.cvtColor(adaptive, cv2.COLOR_GRAY2BGR)
-    except Exception as e:
-        print(f"Erreur threshold_adaptive: {e}")
-        return image
+    # Convertir en niveaux de gris si nécessaire
+    if len(image.shape) == 3:
+        gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    else:
+        gray_image = image.copy()
+    
+    # Appliquer le seuillage adaptatif
+    # Paramètres: blockSize=11, C=2
+    adaptive_thresh = cv2.adaptiveThreshold(
+        gray_image, 
+        255, 
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+        cv2.THRESH_BINARY, 
+        11, 
+        2
+    )
+    return adaptive_thresh
 
 def threshold_otsu(image):
     """Applique un seuillage Otsu"""
-    try:
-        # Convertir en niveaux de gris
-        if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        else:
-            gray = image
-        
-        # Appliquer le seuillage Otsu
-        _, otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        
-        # Convertir en 3 canaux
-        return cv2.cvtColor(otsu, cv2.COLOR_GRAY2BGR)
-    except Exception as e:
-        print(f"Erreur threshold_otsu: {e}")
-        return image
+    # Convertir en niveaux de gris si nécessaire
+    if len(image.shape) == 3:
+        gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    else:
+        gray_image = image.copy()
+    
+    # Appliquer le seuillage Otsu
+    # La méthode d'Otsu calcule automatiquement le seuil optimal
+    _, otsu_thresh = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return otsu_thresh
+
+
+# ==================== FONCTIONS NON IMPLÉMENTÉES ====================
+# TODO: Implémenter les fonctions suivantes
 
 # ===== FILTRES =====
 def apply_gaussian_blur(image, intensity):
@@ -552,6 +555,7 @@ def detect_faces(image):
     except Exception as e:
         print(f"Erreur detect_faces: {e}")
         return image
+
 
 # Route de test
 @app.route('/api/health', methods=['GET'])
