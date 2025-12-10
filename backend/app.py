@@ -81,17 +81,21 @@ def process_image():
         
         # Appliquer l'opération demandée
         processed_image = apply_operation(image, operation, params)
-        
-        # Encoder le résultat
-        result = encode_image(processed_image)
-        
+
+        # ⚠ Si le résultat est déjà base64, ne pas réencoder
+        if isinstance(processed_image, str):
+            result = processed_image
+        else:
+            result = encode_image(processed_image)
+
         return jsonify({
             'success': True,
             'processed_image': result,
             'operation': operation
         })
-        
+    
     except Exception as e:
+        print(f"Erreur process_image: {e}")
         return jsonify({'error': str(e)}), 500
 
 def apply_operation(image, operation, params):
@@ -164,13 +168,13 @@ def apply_operation(image, operation, params):
     
     # Segmentation des canaux
     elif operation == 'channel_r':
-        return extract_channel(image, 0)  # Red
+        return extract_channel(image, 2)  # Red (BGR format in OpenCV)
     
     elif operation == 'channel_g':
         return extract_channel(image, 1)  # Green
     
     elif operation == 'channel_b':
-        return extract_channel(image, 2)  # Blue
+        return extract_channel(image, 0)  # Blue
     
     # Analyse
     elif operation == 'show_histogram':
@@ -183,8 +187,9 @@ def apply_operation(image, operation, params):
         raise ValueError(f"Opération inconnue: {operation}")
 
 
-# ==================== CONVERSION ====================
+# ==================== FONCTIONS DE TRAITEMENT ====================
 
+# ===== CONVERSION =====
 def convert_to_grayscale(image):
     """Convertit l'image en niveaux de gris"""
     # Si l'image est déjà en niveaux de gris
@@ -257,85 +262,299 @@ def threshold_otsu(image):
 # ==================== FONCTIONS NON IMPLÉMENTÉES ====================
 # TODO: Implémenter les fonctions suivantes
 
+# ===== FILTRES =====
 def apply_gaussian_blur(image, intensity):
     """Applique un flou gaussien"""
-    # TODO: Implémenter le flou gaussien
-    pass
+    try:
+        # S'assurer que intensity est impair
+        kernel_size = intensity if intensity % 2 == 1 else intensity + 1
+        kernel_size = max(1, kernel_size)  # Au moins 1
+        
+        blurred = cv2.GaussianBlur(image, (kernel_size, kernel_size), 0)
+        return blurred
+    except Exception as e:
+        print(f"Erreur apply_gaussian_blur: {e}")
+        return image
 
 def apply_median_blur(image, intensity):
     """Applique un filtre médian"""
-    # TODO: Implémenter le filtre médian
-    pass
+    try:
+        # S'assurer que intensity est impair
+        kernel_size = intensity if intensity % 2 == 1 else intensity + 1
+        kernel_size = max(1, kernel_size)  # Au moins 1
+        
+        median = cv2.medianBlur(image, kernel_size)
+        return median
+    except Exception as e:
+        print(f"Erreur apply_median_blur: {e}")
+        return image
 
 def apply_sharpen(image):
     """Applique une accentuation"""
-    # TODO: Implémenter l'accentuation
-    pass
+    try:
+        # Kernel de sharpening
+        kernel = np.array([[-1, -1, -1],
+                          [-1,  9, -1],
+                          [-1, -1, -1]])
+        
+        sharpened = cv2.filter2D(image, -1, kernel)
+        return sharpened
+    except Exception as e:
+        print(f"Erreur apply_sharpen: {e}")
+        return image
 
+# ===== DÉTECTION DE CONTOURS =====
 def detect_edges_canny(image):
     """Détecte les contours avec Canny"""
-    # TODO: Implémenter la détection Canny
-    pass
+    try:
+        # Convertir en niveaux de gris
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image
+        
+        # Appliquer Canny
+        edges = cv2.Canny(gray, 100, 200)
+        
+        # Convertir en 3 canaux
+        return cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+    except Exception as e:
+        print(f"Erreur detect_edges_canny: {e}")
+        return image
 
 def detect_edges_sobel(image):
     """Détecte les contours avec Sobel"""
-    # TODO: Implémenter la détection Sobel
-    pass
+    try:
+        # Convertir en niveaux de gris
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image
+        
+        # Calculer les gradients
+        sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+        sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+        
+        # Magnitude
+        sobel = np.sqrt(sobelx**2 + sobely**2)
+        sobel = np.uint8(sobel / sobel.max() * 255)
+        
+        # Convertir en 3 canaux
+        return cv2.cvtColor(sobel, cv2.COLOR_GRAY2BGR)
+    except Exception as e:
+        print(f"Erreur detect_edges_sobel: {e}")
+        return image
 
 def detect_edges_laplacian(image):
     """Détecte les contours avec Laplacien"""
-    # TODO: Implémenter la détection Laplacien
-    pass
+    try:
+        # Convertir en niveaux de gris
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image
+        
+        # Appliquer Laplacien
+        laplacian = cv2.Laplacian(gray, cv2.CV_64F)
+        laplacian = np.uint8(np.absolute(laplacian))
+        
+        # Convertir en 3 canaux
+        return cv2.cvtColor(laplacian, cv2.COLOR_GRAY2BGR)
+    except Exception as e:
+        print(f"Erreur detect_edges_laplacian: {e}")
+        return image
 
+# ===== TRANSFORMATIONS GÉOMÉTRIQUES =====
 def resize_image(image, scale):
     """Redimensionne l'image"""
-    # TODO: Implémenter le redimensionnement
-    pass
+    try:
+        height, width = image.shape[:2]
+        new_width = int(width * scale)
+        new_height = int(height * scale)
+        
+        # Choisir l'interpolation appropriée
+        interpolation = cv2.INTER_AREA if scale < 1 else cv2.INTER_CUBIC
+        
+        resized = cv2.resize(image, (new_width, new_height), interpolation=interpolation)
+        return resized
+    except Exception as e:
+        print(f"Erreur resize_image: {e}")
+        return image
 
 def rotate_image(image, angle):
     """Fait pivoter l'image"""
-    # TODO: Implémenter la rotation
-    pass
+    try:
+        height, width = image.shape[:2]
+        center = (width // 2, height // 2)
+        
+        # Obtenir la matrice de rotation
+        rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+        
+        # Calculer les nouvelles dimensions
+        abs_cos = abs(rotation_matrix[0, 0])
+        abs_sin = abs(rotation_matrix[0, 1])
+        
+        new_width = int(height * abs_sin + width * abs_cos)
+        new_height = int(height * abs_cos + width * abs_sin)
+        
+        # Ajuster la matrice
+        rotation_matrix[0, 2] += new_width / 2 - center[0]
+        rotation_matrix[1, 2] += new_height / 2 - center[1]
+        
+        # Appliquer la rotation
+        rotated = cv2.warpAffine(
+            image, rotation_matrix, (new_width, new_height),
+            borderMode=cv2.BORDER_CONSTANT,
+            borderValue=(255, 255, 255)
+        )
+        
+        return rotated
+    except Exception as e:
+        print(f"Erreur rotate_image: {e}")
+        return image
 
 def flip_horizontal(image):
     """Applique un miroir horizontal"""
-    # TODO: Implémenter le flip horizontal
-    pass
+    try:
+        flipped = cv2.flip(image, 1)
+        return flipped
+    except Exception as e:
+        print(f"Erreur flip_horizontal: {e}")
+        return image
 
 def flip_vertical(image):
     """Applique un miroir vertical"""
-    # TODO: Implémenter le flip vertical
-    pass
+    try:
+        flipped = cv2.flip(image, 0)
+        return flipped
+    except Exception as e:
+        print(f"Erreur flip_vertical: {e}")
+        return image
 
+# ===== AMÉLIORATION =====
 def histogram_equalization(image):
     """Égalise l'histogramme"""
-    # TODO: Implémenter l'égalisation d'histogramme
-    pass
+    try:
+        # Convertir en YCrCb pour préserver les couleurs
+        if len(image.shape) == 3:
+            ycrcb = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
+            ycrcb[:, :, 0] = cv2.equalizeHist(ycrcb[:, :, 0])
+            equalized = cv2.cvtColor(ycrcb, cv2.COLOR_YCrCb2BGR)
+        else:
+            equalized = cv2.equalizeHist(image)
+            equalized = cv2.cvtColor(equalized, cv2.COLOR_GRAY2BGR)
+        
+        return equalized
+    except Exception as e:
+        print(f"Erreur histogram_equalization: {e}")
+        return image
 
 def normalize_image(image):
     """Normalise l'image"""
-    # TODO: Implémenter la normalisation
-    pass
+    try:
+        normalized = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX)
+        return normalized
+    except Exception as e:
+        print(f"Erreur normalize_image: {e}")
+        return image
 
 def apply_clahe(image):
     """Applique CLAHE (Contrast Limited Adaptive Histogram Equalization)"""
-    # TODO: Implémenter CLAHE
-    pass
+    try:
+        # Créer l'objet CLAHE
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        
+        if len(image.shape) == 3:
+            # Convertir en LAB et appliquer sur le canal L
+            lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+            lab[:, :, 0] = clahe.apply(lab[:, :, 0])
+            result = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+        else:
+            result = clahe.apply(image)
+            result = cv2.cvtColor(result, cv2.COLOR_GRAY2BGR)
+        
+        return result
+    except Exception as e:
+        print(f"Erreur apply_clahe: {e}")
+        return image
 
+# ===== SEGMENTATION DES CANAUX =====
 def extract_channel(image, channel_index):
     """Extrait un canal RGB"""
-    # TODO: Implémenter l'extraction de canal
-    pass
+    try:
+        if len(image.shape) == 3:
+            # Créer une image noire
+            result = np.zeros_like(image)
+            # Extraire le canal
+            result[:, :, channel_index] = image[:, :, channel_index]
+            return result
+        else:
+            return cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+    except Exception as e:
+        print(f"Erreur extract_channel: {e}")
+        return image
 
+# ===== ANALYSE =====
 def generate_histogram(image):
     """Génère un histogramme de l'image"""
-    # TODO: Implémenter la génération d'histogramme
-    pass
+    try:
+        # Créer une image blanche pour dessiner l'histogramme
+        hist_height = 400
+        hist_width = 512
+        hist_image = np.ones((hist_height, hist_width, 3), dtype=np.uint8) * 255
+        
+        if len(image.shape) == 3:
+            colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]  # BGR
+            
+            for i, color in enumerate(colors):
+                hist = cv2.calcHist([image], [i], None, [256], [0, 256])
+                hist = hist / hist.max() * (hist_height - 50)
+                
+                for x in range(256):
+                    x1 = int(x * hist_width / 256)
+                    x2 = int((x + 1) * hist_width / 256)
+                    y = int(hist[x])
+                    cv2.rectangle(hist_image, (x1, hist_height - y), (x2, hist_height), color, -1)
+        else:
+            hist = cv2.calcHist([image], [0], None, [256], [0, 256])
+            hist = hist / hist.max() * (hist_height - 50)
+            
+            for x in range(256):
+                x1 = int(x * hist_width / 256)
+                x2 = int((x + 1) * hist_width / 256)
+                y = int(hist[x])
+                cv2.rectangle(hist_image, (x1, hist_height - y), (x2, hist_height), (0, 0, 0), -1)
+        
+        return hist_image
+    except Exception as e:
+        print(f"Erreur generate_histogram: {e}")
+        return image
 
 def detect_faces(image):
     """Détecte les visages dans l'image"""
-    # TODO: Implémenter la détection de visages
-    pass
+    try:
+        # Charger le classificateur Haar Cascade
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        
+        # Convertir en niveaux de gris pour la détection
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image
+        
+        # Détecter les visages
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+        
+        # Dessiner des rectangles autour des visages
+        result = image.copy()
+        for (x, y, w, h) in faces:
+            cv2.rectangle(result, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.putText(result, 'Face', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+        
+        return result
+    except Exception as e:
+        print(f"Erreur detect_faces: {e}")
+        return image
 
 
 # Route de test
