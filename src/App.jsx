@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Download, RotateCcw, Sliders, BarChart3, Maximize2, History } from 'lucide-react';
+import { Upload, Download, RotateCcw, BarChart3, Eye, History, Sliders } from 'lucide-react';
 
 const ImageProcessor = () => {
   const [originalImage, setOriginalImage] = useState(null);
@@ -9,7 +9,7 @@ const ImageProcessor = () => {
   const [normalizeMax, setNormalizeMax] = useState(255);
   const [histogramType, setHistogramType] = useState('gray');
   const [showHistogram, setShowHistogram] = useState(false);
-  const [equalizeHistogram, setEqualizeHistogram] = useState(false);
+  const [showSplitView, setShowSplitView] = useState(false);
   const canvasRef = useRef(null);
   const histogramCanvasRef = useRef(null);
 
@@ -152,7 +152,7 @@ const ImageProcessor = () => {
     
     if (histogramType === 'gray') {
       const maxVal = Math.max(...histogram.gray);
-      ctx.fillStyle = '#4B5563';
+      ctx.fillStyle = '#6B7280';
       
       for (let i = 0; i < 256; i++) {
         const barHeight = (histogram.gray[i] / maxVal) * height;
@@ -168,7 +168,7 @@ const ImageProcessor = () => {
       
       ctx.globalAlpha = 0.5;
       
-      ['r', 'g', 'b'].forEach((channel, idx) => {
+      ['r', 'g', 'b'].forEach((channel) => {
         ctx.fillStyle = channel === 'r' ? '#EF4444' : channel === 'g' ? '#10B981' : '#3B82F6';
         for (let i = 0; i < 256; i++) {
           const barHeight = (histogram[channel][i] / maxVal) * height;
@@ -180,12 +180,6 @@ const ImageProcessor = () => {
       
       ctx.globalAlpha = 1;
     }
-    
-    ctx.strokeStyle = '#9CA3AF';
-    ctx.beginPath();
-    ctx.moveTo(0, height);
-    ctx.lineTo(width, height);
-    ctx.stroke();
   };
 
   useEffect(() => {
@@ -216,162 +210,286 @@ const ImageProcessor = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Prétraitement d'Images</h1>
-          <p className="text-purple-200">Histogramme & Normalisation</p>
-        </div>
-
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-6 mb-6">
-          <div className="flex flex-wrap gap-4 items-center justify-center">
-            <label className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg cursor-pointer transition-all transform hover:scale-105">
-              <Upload size={20} />
-              <span>Charger une image</span>
-              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-            </label>
-
-            <button
-              onClick={normalizeImage}
-              disabled={!originalImage}
-              className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 text-white rounded-lg transition-all transform hover:scale-105 disabled:cursor-not-allowed"
-            >
-              <Sliders size={20} />
-              Normaliser
-            </button>
-
-            <button
-              onClick={equalizeHistogramFunc}
-              disabled={!originalImage}
-              className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-500 text-white rounded-lg transition-all transform hover:scale-105 disabled:cursor-not-allowed"
-            >
-              <History size={20} />
-              Égaliser l'histogramme
-            </button>
-
-            <button
-              onClick={() => setShowHistogram(!showHistogram)}
-              disabled={!originalImage}
-              className="flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-500 text-white rounded-lg transition-all transform hover:scale-105 disabled:cursor-not-allowed"
-            >
-              <BarChart3 size={20} />
-              {showHistogram ? 'Masquer' : 'Afficher'} Histogramme
-            </button>
-
-            <button
-              onClick={resetImage}
-              disabled={!originalImage}
-              className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-500 text-white rounded-lg transition-all transform hover:scale-105 disabled:cursor-not-allowed"
-            >
-              <RotateCcw size={20} />
-              Réinitialiser
-            </button>
-
-            <button
-              onClick={downloadImage}
-              disabled={!processedImage}
-              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-500 text-white rounded-lg transition-all transform hover:scale-105 disabled:cursor-not-allowed"
-            >
-              <Download size={20} />
-              Télécharger
-            </button>
-          </div>
-
-          {originalImage && (
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white/5 p-4 rounded-lg">
-                <label className="block text-white mb-2 text-sm">Normalisation Min (0-255)</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="255"
-                  value={normalizeMin}
-                  onChange={(e) => setNormalizeMin(parseInt(e.target.value))}
-                  className="w-full"
-                />
-                <span className="text-white text-sm">{normalizeMin}</span>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Sliders className="text-white" size={24} />
               </div>
-
-              <div className="bg-white/5 p-4 rounded-lg">
-                <label className="block text-white mb-2 text-sm">Normalisation Max (0-255)</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="255"
-                  value={normalizeMax}
-                  onChange={(e) => setNormalizeMax(parseInt(e.target.value))}
-                  className="w-full"
-                />
-                <span className="text-white text-sm">{normalizeMax}</span>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Amélioration d'Images</h1>
+                <p className="text-sm text-gray-500">Histogramme & Normalisation</p>
               </div>
             </div>
-          )}
-
-          {showHistogram && originalImage && (
-            <div className="mt-6 bg-white/5 p-4 rounded-lg">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-white font-semibold">Histogramme</h3>
-                <select
-                  value={histogramType}
-                  onChange={(e) => {
-                    setHistogramType(e.target.value);
-                    calculateHistogram(processedImage, e.target.value);
-                  }}
-                  className="bg-white/10 text-white px-4 py-2 rounded-lg border border-white/20"
-                >
-                  <option value="gray">Niveaux de gris</option>
-                  <option value="rgb">Canaux RGB</option>
-                </select>
-              </div>
-              <canvas
-                ref={histogramCanvasRef}
-                width="800"
-                height="200"
-                className="w-full bg-white/5 rounded-lg"
+            
+            <div className="flex items-center gap-3">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                id="fileInput"
               />
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-6">
-            <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-              <Maximize2 size={20} />
-              Image Originale
-            </h3>
-            <div className="bg-white/5 rounded-lg p-4 min-h-[400px] flex items-center justify-center">
-              {originalImage ? (
-                <img src={originalImage.src} alt="Original" className="max-w-full max-h-[500px] rounded-lg" />
-              ) : (
-                <p className="text-gray-400">Aucune image chargée</p>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-6">
-            <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-              <Maximize2 size={20} />
-              Image Traitée
-            </h3>
-            <div className="bg-white/5 rounded-lg p-4 min-h-[400px] flex items-center justify-center">
-              {processedImage ? (
-                <img src={processedImage.src} alt="Processed" className="max-w-full max-h-[500px] rounded-lg" />
-              ) : (
-                <p className="text-gray-400">Aucune image traitée</p>
-              )}
+              <label
+                htmlFor="fileInput"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors font-medium cursor-pointer"
+              >
+                <Upload size={18} />
+                Charger Image
+              </label>
             </div>
           </div>
         </div>
+      </header>
 
-        <div className="mt-6 bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-6">
-          <h3 className="text-xl font-semibold text-white mb-4">Guide d'utilisation</h3>
-          <div className="text-purple-100 space-y-2 text-sm">
-            <p><strong>Normalisation :</strong> Ajuste les valeurs de pixels dans une plage définie (min-max) pour améliorer le contraste.</p>
-            <p><strong>Égalisation d'histogramme :</strong> Redistribue les intensités de pixels pour améliorer le contraste global de l'image.</p>
-            <p><strong>Histogramme :</strong> Visualise la distribution des intensités de pixels (niveaux de gris ou canaux RGB).</p>
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="grid grid-cols-12 gap-6">
+          {/* Sidebar Controls */}
+          <div className="col-span-3">
+            <div className="space-y-6">
+              {/* Normalization Controls */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">Normalisation</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-gray-600 mb-2 block">
+                      Min: <span className="font-bold text-blue-600">{normalizeMin}</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="255"
+                      value={normalizeMin}
+                      onChange={(e) => setNormalizeMin(parseInt(e.target.value))}
+                      className="w-full range-slider"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-600 mb-2 block">
+                      Max: <span className="font-bold text-blue-600">{normalizeMax}</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="255"
+                      value={normalizeMax}
+                      onChange={(e) => setNormalizeMax(parseInt(e.target.value))}
+                      className="w-full range-slider"
+                    />
+                  </div>
+
+                  <button
+                    onClick={normalizeImage}
+                    disabled={!originalImage}
+                    className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Appliquer Normalisation
+                  </button>
+                </div>
+              </div>
+
+              {/* Histogram Controls */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">Histogramme</h3>
+                <div className="space-y-3">
+                  <button
+                    onClick={equalizeHistogramFunc}
+                    disabled={!originalImage}
+                    className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <History size={16} />
+                    Égaliser Histogramme
+                  </button>
+
+                  <button
+                    onClick={() => setShowHistogram(!showHistogram)}
+                    disabled={!originalImage}
+                    className={`w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                      showHistogram
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                    }`}
+                  >
+                    <BarChart3 size={16} />
+                    {showHistogram ? 'Masquer' : 'Afficher'} Histogramme
+                  </button>
+
+                  {showHistogram && (
+                    <div>
+                      <label className="text-xs text-gray-600 mb-2 block">Type d'histogramme</label>
+                      <select
+                        value={histogramType}
+                        onChange={(e) => {
+                          setHistogramType(e.target.value);
+                          if (processedImage) {
+                            calculateHistogram(processedImage, e.target.value);
+                          }
+                        }}
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="gray">Niveaux de gris</option>
+                        <option value="rgb">Canaux RGB</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">Actions</h3>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setShowSplitView(!showSplitView)}
+                    disabled={!processedImage || processedImage === originalImage}
+                    className={`w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                      showSplitView
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                    }`}
+                  >
+                    <Eye size={16} />
+                    Vue Comparaison
+                  </button>
+
+                  <button
+                    onClick={resetImage}
+                    disabled={!originalImage}
+                    className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <RotateCcw size={16} />
+                    Réinitialiser
+                  </button>
+
+                  <button
+                    onClick={downloadImage}
+                    disabled={!processedImage}
+                    className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <Download size={16} />
+                    Télécharger
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Display */}
+          <div className="col-span-9">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+              {/* Histogram Display */}
+              {showHistogram && originalImage && (
+                <div className="border-b border-gray-200 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-gray-900">Histogramme</h3>
+                  </div>
+                  <canvas
+                    ref={histogramCanvasRef}
+                    width="800"
+                    height="150"
+                    className="w-full bg-gray-50 rounded-lg border border-gray-200"
+                  />
+                </div>
+              )}
+
+              {/* Image Display */}
+              <div className="p-6">
+                <div className="bg-gray-50 rounded-lg min-h-[600px] flex items-center justify-center border border-gray-200">
+                  {!originalImage ? (
+                    <div className="text-center py-12">
+                      <div className="w-20 h-20 bg-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Sliders size={40} className="text-gray-400" />
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900 mb-1">Aucune image sélectionnée</p>
+                      <p className="text-sm text-gray-500">Chargez une image pour commencer</p>
+                    </div>
+                  ) : showSplitView && processedImage !== originalImage ? (
+                    <div className="w-full overflow-auto p-4">
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-center gap-2 text-gray-700 font-semibold text-sm">
+                            <span>Image Originale</span>
+                          </div>
+                          <div className="bg-white rounded-lg p-4 border border-gray-200 flex items-center justify-center">
+                            <img
+                              src={originalImage.src}
+                              alt="Original"
+                              className="max-w-full h-auto rounded-lg shadow-md"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-center gap-2 text-blue-700 font-semibold text-sm">
+                            <span>Image Traitée</span>
+                          </div>
+                          <div className="bg-white rounded-lg p-4 border border-gray-200 flex items-center justify-center">
+                            <img
+                              src={processedImage.src}
+                              alt="Processed"
+                              className="max-w-full h-auto rounded-lg shadow-md"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center p-4">
+                      <img
+                        src={processedImage ? processedImage.src : originalImage.src}
+                        alt="Current"
+                        className="max-w-full h-auto rounded-lg shadow-lg"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Styles */}
+      <style>{`
+        .range-slider {
+          -webkit-appearance: none;
+          appearance: none;
+          height: 6px;
+          background: #e5e7eb;
+          border-radius: 3px;
+          outline: none;
+        }
+        .range-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 18px;
+          height: 18px;
+          background: #2563eb;
+          border-radius: 50%;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .range-slider::-webkit-slider-thumb:hover {
+          background: #1d4ed8;
+          transform: scale(1.1);
+        }
+        .range-slider::-moz-range-thumb {
+          width: 18px;
+          height: 18px;
+          background: #2563eb;
+          border: none;
+          border-radius: 50%;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .range-slider::-moz-range-thumb:hover {
+          background: #1d4ed8;
+          transform: scale(1.1);
+        }
+      `}</style>
     </div>
   );
 };
